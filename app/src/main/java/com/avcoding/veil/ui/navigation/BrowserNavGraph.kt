@@ -1,6 +1,7 @@
 package com.avcoding.veil.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -71,11 +72,24 @@ fun BrowserNavGraph(navController: NavHostController) {
                 }
             )
         }
-        composable(Screen.Tabs.route) {
+        composable(Screen.Tabs.route) { tabsBackStackEntry ->
+            val browserBackStackEntry = remember(navController) {
+                try {
+                    navController.getBackStackEntry(Screen.Browser.route)
+                } catch (e: IllegalArgumentException) {
+                    tabsBackStackEntry
+                }
+            }
             TabsScreen(
+                browserBackStackEntry = browserBackStackEntry,
                 onSelectTab = { url ->
                     navController.navigate(Screen.Browser.createRoute(url)) {
-                        popUpTo(Screen.Tabs.route) { inclusive = true }
+                        popUpTo(Screen.Home.route) { inclusive = false }
+                    }
+                },
+                onNewTab = {
+                    navController.navigate(Screen.Browser.createRoute("")) {
+                        popUpTo(Screen.Home.route) { inclusive = false }
                     }
                 },
                 onClose = {

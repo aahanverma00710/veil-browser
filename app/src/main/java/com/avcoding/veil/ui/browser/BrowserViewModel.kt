@@ -20,7 +20,8 @@ data class BrowserUiState(
     val canGoBack: Boolean = false,
     val canGoForward: Boolean = false,
     val title: String = "New Tab",
-    val tabs: List<Tab> = emptyList()
+    val tabs: List<Tab> = emptyList(),
+    val activeTabId: String? = null
 )
 
 @HiltViewModel
@@ -35,14 +36,35 @@ class BrowserViewModel @Inject constructor(
 
     init {
         tabRepository.tabs
-            .onEach { tabs ->
-                _uiState.update { it.copy(tabs = tabs) }
-            }
+            .onEach { tabs -> _uiState.update { it.copy(tabs = tabs) } }
             .launchIn(viewModelScope)
+
+        tabRepository.activeTabId
+            .onEach { id -> _uiState.update { it.copy(activeTabId = id) } }
+            .launchIn(viewModelScope)
+    }
+
+    fun newTab(url: String = ""): String {
+        val tab = tabRepository.addTab(url)
+        return tab.id
+    }
+
+    fun switchTab(tabId: String) {
+        tabRepository.switchTab(tabId)
+        val tab = tabRepository.getTab(tabId)
+        _uiState.update { it.copy(
+            currentUrl = tab?.url ?: "",
+            title = tab?.title ?: "New Tab"
+        ) }
+    }
+
+    fun closeTab(tabId: String) {
+        tabRepository.closeTab(tabId)
     }
 
     fun onUrlChanged(url: String) {
         _uiState.update { it.copy(currentUrl = url) }
+        tabRepository.updateActiveTab(url = url)
     }
 
     fun onLoadingStateChanged(isLoading: Boolean) {
@@ -55,6 +77,7 @@ class BrowserViewModel @Inject constructor(
 
     fun onTitleChanged(title: String) {
         _uiState.update { it.copy(title = title) }
+        tabRepository.updateActiveTab(title = title)
     }
 
     fun onNavigationStateChanged(canGoBack: Boolean, canGoForward: Boolean) {

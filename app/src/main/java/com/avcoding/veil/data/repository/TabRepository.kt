@@ -13,23 +13,56 @@ class TabRepository @Inject constructor() {
     private val _tabs = MutableStateFlow<List<Tab>>(emptyList())
     val tabs: StateFlow<List<Tab>> = _tabs.asStateFlow()
 
-    fun createTab(url: String, title: String): Tab {
+    private val _activeTabId = MutableStateFlow<String?>(null)
+    val activeTabId: StateFlow<String?> = _activeTabId.asStateFlow()
+
+    fun addTab(url: String): Tab {
         val newTab = Tab(
             id = UUID.randomUUID().toString(),
-            title = title,
+            title = if (url.isEmpty()) "New Tab" else url,
             url = url
         )
         _tabs.value = _tabs.value + newTab
+        _activeTabId.value = newTab.id
         return newTab
     }
 
-    fun updateTab(updatedTab: Tab) {
-        _tabs.value = _tabs.value.map {
-            if (it.id == updatedTab.id) updatedTab else it
+    fun closeTab(tabId: String) {
+        val wasActive = _activeTabId.value == tabId
+        val remaining = _tabs.value.filter { it.id != tabId }
+        if (remaining.isEmpty()) {
+            val defaultTab = Tab(
+                id = UUID.randomUUID().toString(),
+                title = "New Tab",
+                url = ""
+            )
+            _tabs.value = listOf(defaultTab)
+            _activeTabId.value = defaultTab.id
+        } else {
+            _tabs.value = remaining
+            if (wasActive) {
+                _activeTabId.value = remaining.last().id
+            }
         }
     }
 
-    fun closeTab(tabId: String) {
-        _tabs.value = _tabs.value.filter { it.id != tabId }
+    fun switchTab(tabId: String) {
+        _activeTabId.value = tabId
     }
+
+    fun updateActiveTab(title: String? = null, url: String? = null) {
+        val activeId = _activeTabId.value ?: return
+        _tabs.value = _tabs.value.map { tab ->
+            if (tab.id == activeId) {
+                tab.copy(
+                    title = title ?: tab.title,
+                    url = url ?: tab.url
+                )
+            } else tab
+        }
+    }
+
+    fun getActiveTabId(): String? = _activeTabId.value
+
+    fun getTab(tabId: String): Tab? = _tabs.value.firstOrNull { it.id == tabId }
 }
