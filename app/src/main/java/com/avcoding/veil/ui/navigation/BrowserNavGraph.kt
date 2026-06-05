@@ -9,6 +9,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.avcoding.veil.ui.bookmarks.BookmarksScreen
 import com.avcoding.veil.ui.browser.BrowserScreen
+import com.avcoding.veil.ui.downloads.DownloadsScreen
+import com.avcoding.veil.ui.history.HistoryScreen
 import com.avcoding.veil.ui.homepage.HomepageScreen
 import com.avcoding.veil.ui.tabs.TabsScreen
 
@@ -19,6 +21,8 @@ sealed class Screen(val route: String) {
     }
     data object Bookmarks : Screen("bookmarks")
     data object Tabs : Screen("tabs")
+    data object Downloads : Screen("downloads")
+    data object History : Screen("history")
 }
 
 @Composable
@@ -37,9 +41,16 @@ fun BrowserNavGraph(navController: NavHostController) {
                 },
                 onNavigateToTabs = {
                     navController.navigate(Screen.Tabs.route)
+                },
+                onNavigateToHistory = {
+                    navController.navigate(Screen.History.route)
+                },
+                onNavigateToDownloads = {
+                    navController.navigate(Screen.Downloads.route)
                 }
             )
         }
+
         composable(
             route = Screen.Browser.route,
             arguments = listOf(
@@ -59,19 +70,60 @@ fun BrowserNavGraph(navController: NavHostController) {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Home.route) { inclusive = true }
                     }
+                },
+                onNavigateToBookmarks = {
+                    navController.navigate(Screen.Bookmarks.route)
+                },
+                onNavigateToHistory = {
+                    navController.navigate(Screen.History.route)
+                },
+                onNavigateToDownloads = {
+                    navController.navigate(Screen.Downloads.route)
                 }
             )
         }
+
         composable(Screen.Bookmarks.route) {
             BookmarksScreen(
-                onNavigateToBrowser = { url ->
-                    navController.navigate(Screen.Browser.createRoute(url))
+                onNavigateToBrowser = { bookmarkUrl ->
+                    navController.navigate(Screen.Browser.createRoute(bookmarkUrl))
                 },
                 onBack = {
                     navController.popBackStack()
                 }
             )
         }
+
+        composable(Screen.History.route) {
+            HistoryScreen(
+                onNavigateToBrowser = { url ->
+                    navController.navigate(Screen.Browser.createRoute(url))
+                },
+                onNavigateToHome = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
+                },
+                onNavigateToBookmarks = {
+                    navController.navigate(Screen.Bookmarks.route)
+                },
+                onNavigateToTabs = {
+                    navController.navigate(Screen.Tabs.route)
+                },
+                onNavigateToDownloads = {
+                    navController.navigate(Screen.Downloads.route)
+                }
+            )
+        }
+
+        composable(Screen.Downloads.route) {
+            DownloadsScreen(
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
         composable(Screen.Tabs.route) { tabsBackStackEntry ->
             val browserBackStackEntry = remember(navController) {
                 try {
@@ -82,8 +134,8 @@ fun BrowserNavGraph(navController: NavHostController) {
             }
             TabsScreen(
                 browserBackStackEntry = browserBackStackEntry,
-                onSelectTab = { url ->
-                    navController.navigate(Screen.Browser.createRoute(url)) {
+                onSelectTab = { tabUrl ->
+                    navController.navigate(Screen.Browser.createRoute(tabUrl)) {
                         popUpTo(Screen.Home.route) { inclusive = false }
                     }
                 },
@@ -92,8 +144,19 @@ fun BrowserNavGraph(navController: NavHostController) {
                         popUpTo(Screen.Home.route) { inclusive = false }
                     }
                 },
-                onClose = {
-                    navController.popBackStack()
+                onNavigateToHome = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
+                },
+                onNavigateToBookmarks = {
+                    navController.navigate(Screen.Bookmarks.route)
+                },
+                onNavigateToHistory = {
+                    navController.navigate(Screen.History.route)
+                },
+                onNavigateToDownloads = {
+                    navController.navigate(Screen.Downloads.route)
                 }
             )
         }

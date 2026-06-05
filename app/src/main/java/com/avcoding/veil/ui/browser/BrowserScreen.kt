@@ -5,28 +5,48 @@ import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.avcoding.veil.ui.components.PillScreenType
+import com.avcoding.veil.ui.components.SettingsBottomSheet
+import com.avcoding.veil.ui.components.VeilBottomPill
+import com.avcoding.veil.ui.components.VeilTopBar
+import com.avcoding.veil.ui.theme.VeilAccent
+import com.avcoding.veil.ui.theme.VeilBackground
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrowserScreen(
     initialUrl: String,
     viewModel: BrowserViewModel = hiltViewModel(),
     onNavigateToTabs: () -> Unit,
-    onNavigateToHome: () -> Unit
+    onNavigateToHome: () -> Unit,
+    onNavigateToBookmarks: () -> Unit = {},
+    onNavigateToDownloads: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var webView: WebView? by remember { mutableStateOf(null) }
+    var sheetVisible by remember { mutableStateOf(false) }
+
+    val isSecure = uiState.currentUrl.startsWith("https://")
+
+    BackHandler {
+        if (webView?.canGoBack() == true) {
+            webView?.goBack()
+        } else {
+            onNavigateToHome()
+        }
+    }
 
     LaunchedEffect(initialUrl) {
         if (initialUrl.isNotEmpty()) {
@@ -35,76 +55,45 @@ fun BrowserScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    TextField(
-                        value = uiState.currentUrl,
-                        onValueChange = { viewModel.onUrlChanged(it) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        trailingIcon = {
-                            IconButton(onClick = { webView?.loadUrl(uiState.currentUrl) }) {
-                                Icon(Icons.Default.Refresh, contentDescription = "Reload")
-                            }
-                        }
-                    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(VeilBackground)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 80.dp)
+        ) {
+            VeilTopBar(
+                isHomepage = false,
+                currentUrl = uiState.currentUrl,
+                onUrlSubmit = { url ->
+                    viewModel.onUrlChanged(url)
+                    webView?.loadUrl(url)
                 },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateToHome) {
-                        Icon(Icons.Default.Home, contentDescription = "Home")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { viewModel.addBookmark() }) {
-                        Icon(Icons.Default.Favorite, contentDescription = "Add Bookmark")
-                    }
-                    IconButton(onClick = onNavigateToTabs) {
-                        Icon(Icons.Default.Layers, contentDescription = "Tabs")
-                    }
-                }
+                onSettingsClick = { sheetVisible = true },
+                isSecure = isSecure,
+                onRefresh = { webView?.reload() }
             )
-        },
-        bottomBar = {
-            BottomAppBar {
-                IconButton(
-                    onClick = { webView?.goBack() },
-                    enabled = uiState.canGoBack
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                }
-                IconButton(
-                    onClick = { webView?.goForward() },
-                    enabled = uiState.canGoForward
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Forward")
-                }
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = { viewModel.toggleAdBlock() }) {
-                    Icon(
-                        if (uiState.isAdBlockEnabled) Icons.Default.Shield else Icons.Default.ShieldMoon,
-                        contentDescription = "Toggle AdBlock",
-                        tint = if (uiState.isAdBlockEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                    )
-                }
-            }
-        }
-    ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
+
             if (uiState.isLoading) {
                 LinearProgressIndicator(
                     progress = { uiState.progress / 100f },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    color = VeilAccent
                 )
             }
+
             AndroidView(
                 factory = { context ->
                     WebView(context).apply {
                         @Suppress("SetJavaScriptEnabled")
                         settings.javaScriptEnabled = true
                         webViewClient = object : WebViewClient() {
-                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                            override fun onPageStarted(
+                                view: WebView?, url: String?, favicon: Bitmap?
+                            ) {
                                 viewModel.onLoadingStateChanged(isLoading = true)
                                 url?.let { viewModel.onUrlChanged(it) }
                             }
@@ -146,5 +135,30 @@ fun BrowserScreen(
                 modifier = Modifier.fillMaxSize()
             )
         }
+
+        VeilBottomPill(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            screenType = PillScreenType.BROWSER,
+            canGoBack = uiState.canGoBack,
+            canGoForward = uiState.canGoForward,
+            tabCount = uiState.tabs.size,
+            onBack = { webView?.goBack() },
+            onForward = { webView?.goForward() },
+            onTabs = onNavigateToTabs,
+            onHome = onNavigateToHome
+        )
+    }
+
+    if (sheetVisible) {
+        SettingsBottomSheet(
+            isAdBlockEnabled = uiState.isAdBlockEnabled,
+            onAdBlockToggle = { viewModel.toggleAdBlock() },
+            onDismiss = { sheetVisible = false },
+            onBookmarks = { sheetVisible = false; onNavigateToBookmarks() },
+            onHistory = { sheetVisible = false; onNavigateToHistory() },
+            onDownloads = { sheetVisible = false; onNavigateToDownloads() }
+        )
     }
 }
