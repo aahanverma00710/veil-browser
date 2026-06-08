@@ -4,12 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.avcoding.veil.adblock.AdBlocker
 import com.avcoding.veil.data.repository.BookmarkRepository
+import com.avcoding.veil.data.repository.DownloadRepository
 import com.avcoding.veil.data.repository.HistoryRepository
 import com.avcoding.veil.data.repository.TabRepository
 import com.avcoding.veil.domain.model.Bookmark
 import com.avcoding.veil.domain.model.Tab
 import com.avcoding.veil.util.PrivateModeManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -32,12 +34,16 @@ class BrowserViewModel @Inject constructor(
     private val tabRepository: TabRepository,
     private val bookmarkRepository: BookmarkRepository,
     private val historyRepository: HistoryRepository,
+    private val downloadRepository: DownloadRepository,
     val adBlocker: AdBlocker,
     val privateModeManager: PrivateModeManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BrowserUiState())
     val uiState: StateFlow<BrowserUiState> = _uiState.asStateFlow()
+
+    private val _downloadEvent = Channel<String>(Channel.BUFFERED)
+    val downloadEvent: Flow<String> = _downloadEvent.receiveAsFlow()
 
     init {
         tabRepository.tabs
@@ -113,6 +119,17 @@ class BrowserViewModel @Inject constructor(
     fun addToHistory(url: String, title: String) {
         viewModelScope.launch {
             historyRepository.addHistory(url, title)
+        }
+    }
+
+    fun startDownload(url: String, fileName: String, mimeType: String) {
+        viewModelScope.launch {
+            try {
+                downloadRepository.startDownload(url, fileName, mimeType)
+                _downloadEvent.trySend("Downloading $fileName…")
+            } catch (e: Exception) {
+                _downloadEvent.trySend("Download failed: ${e.message}")
+            }
         }
     }
 

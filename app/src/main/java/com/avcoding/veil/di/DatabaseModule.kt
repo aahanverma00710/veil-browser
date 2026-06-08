@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.room.Room
 import com.avcoding.veil.data.local.BrowserDatabase
 import com.avcoding.veil.data.local.dao.BookmarkDao
+import com.avcoding.veil.data.local.dao.DownloadDao
 import com.avcoding.veil.data.local.dao.HistoryDao
+import com.avcoding.veil.data.repository.DownloadRepository
 import com.avcoding.veil.data.repository.HistoryRepository
 import com.avcoding.veil.util.PrivateModeManager
 import dagger.Module
@@ -39,11 +41,25 @@ object DatabaseModule {
     }
 
     @Provides
+    fun provideDownloadDao(database: BrowserDatabase): DownloadDao {
+        return database.downloadDao()
+    }
+
+    @Provides
     @Singleton
     fun provideHistoryRepository(
         historyDao: HistoryDao,
         privateModeManager: PrivateModeManager
     ): HistoryRepository {
         return HistoryRepository(historyDao, privateModeManager)
+    }
+
+    @Provides
+    @Singleton
+    fun provideDownloadRepository(
+        @ApplicationContext context: Context,
+        downloadDao: DownloadDao
+    ): DownloadRepository {
+        return DownloadRepository(context, downloadDao)
     }
 }

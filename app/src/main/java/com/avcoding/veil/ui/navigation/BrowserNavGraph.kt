@@ -129,8 +129,19 @@ fun BrowserNavGraph(navController: NavHostController) {
 
         composable(Screen.Downloads.route) {
             DownloadsScreen(
-                onBack = {
-                    navController.popBackStack()
+                onNavigateToHome = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
+                },
+                onNavigateToBookmarks = {
+                    navController.navigate(Screen.Bookmarks.route)
+                },
+                onNavigateToHistory = {
+                    navController.navigate(Screen.History.route)
+                },
+                onNavigateToTabs = {
+                    navController.navigate(Screen.Tabs.route)
                 }
             )
         }
