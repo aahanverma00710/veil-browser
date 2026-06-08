@@ -3,6 +3,7 @@ package com.avcoding.veil.ui.browser
 import android.graphics.Bitmap
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
@@ -26,6 +27,7 @@ import com.avcoding.veil.ui.theme.VeilBackground
 @Composable
 fun BrowserScreen(
     initialUrl: String,
+    isPrivate: Boolean = false,
     viewModel: BrowserViewModel = hiltViewModel(),
     onNavigateToTabs: () -> Unit,
     onNavigateToHome: () -> Unit,
@@ -74,6 +76,7 @@ fun BrowserScreen(
                 },
                 onSettingsClick = { sheetVisible = true },
                 isSecure = isSecure,
+                isPrivate = isPrivate,
                 onRefresh = { webView?.reload() }
             )
 
@@ -90,6 +93,13 @@ fun BrowserScreen(
                     WebView(context).apply {
                         @Suppress("SetJavaScriptEnabled")
                         settings.javaScriptEnabled = true
+
+                        if (isPrivate) {
+                            settings.cacheMode = WebSettings.LOAD_NO_CACHE
+                            @Suppress("DEPRECATION")
+                            settings.saveFormData = false
+                        }
+
                         webViewClient = object : WebViewClient() {
                             override fun onPageStarted(
                                 view: WebView?, url: String?, favicon: Bitmap?
@@ -104,6 +114,10 @@ fun BrowserScreen(
                                     canGoBack = view?.canGoBack() ?: false,
                                     canGoForward = view?.canGoForward() ?: false
                                 )
+                                url?.let { u ->
+                                    val title = view?.title ?: u
+                                    viewModel.addToHistory(u, title)
+                                }
                             }
 
                             override fun shouldInterceptRequest(

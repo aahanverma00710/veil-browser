@@ -16,11 +16,12 @@ class TabRepository @Inject constructor() {
     private val _activeTabId = MutableStateFlow<String?>(null)
     val activeTabId: StateFlow<String?> = _activeTabId.asStateFlow()
 
-    fun addTab(url: String): Tab {
+    fun addTab(url: String, isPrivate: Boolean = false): Tab {
         val newTab = Tab(
             id = UUID.randomUUID().toString(),
             title = if (url.isEmpty()) "New Tab" else url,
-            url = url
+            url = url,
+            isPrivate = isPrivate
         )
         _tabs.value = _tabs.value + newTab
         _activeTabId.value = newTab.id
@@ -63,6 +64,7 @@ class TabRepository @Inject constructor() {
     }
 
     fun getActiveTabId(): String? = _activeTabId.value
-
     fun getTab(tabId: String): Tab? = _tabs.value.firstOrNull { it.id == tabId }
+    fun getPrivateTabs(): List<Tab> = _tabs.value.filter { it.isPrivate }
+    fun getNormalTabs(): List<Tab> = _tabs.value.filter { !it.isPrivate }
 }

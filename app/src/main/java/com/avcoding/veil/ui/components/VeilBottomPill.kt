@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.avcoding.veil.ui.theme.*
@@ -31,6 +32,8 @@ fun VeilBottomPill(
     modifier: Modifier = Modifier,
     screenType: PillScreenType,
     activeDestination: String = "home",
+    borderWidth: Dp = 0.5.dp,
+    borderColor: Color = VeilPillBorder,
     canGoBack: Boolean = false,
     canGoForward: Boolean = false,
     tabCount: Int = 0,
@@ -46,7 +49,7 @@ fun VeilBottomPill(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
             .background(VeilPillBg)
-            .border(0.5.dp, VeilPillBorder, RoundedCornerShape(20.dp))
+            .border(borderWidth, borderColor, RoundedCornerShape(20.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -142,8 +145,7 @@ private fun BrowserPillRow(
     onHome: () -> Unit
 ) {
     Row(
-        modifier = Modifier
-            .height(52.dp),
+        modifier = Modifier.height(52.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -161,7 +163,6 @@ private fun BrowserPillRow(
             contentDescription = "Forward",
             onClick = onForward
         )
-        // Tabs pill button
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(10.dp))

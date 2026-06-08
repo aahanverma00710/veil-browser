@@ -1,6 +1,7 @@
 package com.avcoding.veil.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +33,7 @@ fun VeilTopBar(
     onUrlSubmit: (String) -> Unit,
     onSettingsClick: () -> Unit,
     isSecure: Boolean = true,
+    isPrivate: Boolean = false,
     onRefresh: () -> Unit = {}
 ) {
     Row(
@@ -44,13 +46,15 @@ fun VeilTopBar(
         if (isHomepage) {
             HomepageSearchBar(
                 modifier = Modifier.weight(1f),
-                onSearch = onUrlSubmit
+                onSearch = onUrlSubmit,
+                isPrivate = isPrivate
             )
         } else {
             BrowserUrlBar(
                 modifier = Modifier.weight(1f),
                 url = currentUrl,
                 isSecure = isSecure,
+                isPrivate = isPrivate,
                 onUrlSubmit = onUrlSubmit,
                 onRefresh = onRefresh
             )
@@ -77,19 +81,38 @@ fun VeilTopBar(
 @Composable
 private fun HomepageSearchBar(
     modifier: Modifier = Modifier,
-    onSearch: (String) -> Unit
+    onSearch: (String) -> Unit,
+    isPrivate: Boolean = false
 ) {
+    val bgColor = if (isPrivate) Color(0xFF818CF8).copy(alpha = 0.12f) else VeilSurfaceItem
+    val borderColor = if (isPrivate) Color(0xFF818CF8).copy(alpha = 0.3f) else Color.Transparent
+
     var query by remember { mutableStateOf("") }
     var isFocused by remember { mutableStateOf(false) }
 
+    val rowModifier = modifier
+        .height(40.dp)
+        .clip(RoundedCornerShape(20.dp))
+        .background(bgColor)
+        .then(
+            if (isPrivate) Modifier.border(1.dp, borderColor, RoundedCornerShape(20.dp))
+            else Modifier
+        )
+        .padding(horizontal = 12.dp)
+
     Row(
-        modifier = modifier
-            .height(40.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(VeilSurfaceItem)
-            .padding(horizontal = 12.dp),
+        modifier = rowModifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (isPrivate) {
+            Icon(
+                imageVector = Icons.Default.Shield,
+                contentDescription = "Private",
+                tint = VeilAccent,
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+        }
         Icon(
             imageVector = Icons.Default.Search,
             contentDescription = null,
@@ -139,6 +162,7 @@ private fun BrowserUrlBar(
     modifier: Modifier = Modifier,
     url: String,
     isSecure: Boolean,
+    isPrivate: Boolean = false,
     onUrlSubmit: (String) -> Unit,
     onRefresh: () -> Unit
 ) {
@@ -152,6 +176,15 @@ private fun BrowserUrlBar(
             .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (isPrivate) {
+            Icon(
+                imageVector = Icons.Default.VisibilityOff,
+                contentDescription = "Private mode",
+                tint = VeilAccent,
+                modifier = Modifier.size(12.dp)
+            )
+            Spacer(Modifier.width(4.dp))
+        }
         Icon(
             imageVector = if (isSecure) Icons.Default.Lock else Icons.Default.LockOpen,
             contentDescription = null,

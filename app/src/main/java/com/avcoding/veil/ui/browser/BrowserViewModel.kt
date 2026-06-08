@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.avcoding.veil.adblock.AdBlocker
 import com.avcoding.veil.data.repository.BookmarkRepository
+import com.avcoding.veil.data.repository.HistoryRepository
 import com.avcoding.veil.data.repository.TabRepository
 import com.avcoding.veil.domain.model.Bookmark
 import com.avcoding.veil.domain.model.Tab
+import com.avcoding.veil.util.PrivateModeManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -21,14 +23,17 @@ data class BrowserUiState(
     val canGoForward: Boolean = false,
     val title: String = "New Tab",
     val tabs: List<Tab> = emptyList(),
-    val activeTabId: String? = null
+    val activeTabId: String? = null,
+    val isPrivate: Boolean = false
 )
 
 @HiltViewModel
 class BrowserViewModel @Inject constructor(
     private val tabRepository: TabRepository,
     private val bookmarkRepository: BookmarkRepository,
-    val adBlocker: AdBlocker
+    private val historyRepository: HistoryRepository,
+    val adBlocker: AdBlocker,
+    val privateModeManager: PrivateModeManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BrowserUiState())
@@ -42,20 +47,26 @@ class BrowserViewModel @Inject constructor(
         tabRepository.activeTabId
             .onEach { id -> _uiState.update { it.copy(activeTabId = id) } }
             .launchIn(viewModelScope)
+
+        privateModeManager.isPrivate
+            .onEach { private -> _uiState.update { it.copy(isPrivate = private) } }
+            .launchIn(viewModelScope)
     }
 
-    fun newTab(url: String = ""): String {
-        val tab = tabRepository.addTab(url)
+    fun newTab(url: String = "", isPrivate: Boolean = false): String {
+        val tab = tabRepository.addTab(url, isPrivate)
         return tab.id
     }
 
     fun switchTab(tabId: String) {
         tabRepository.switchTab(tabId)
         val tab = tabRepository.getTab(tabId)
-        _uiState.update { it.copy(
-            currentUrl = tab?.url ?: "",
-            title = tab?.title ?: "New Tab"
-        ) }
+        _uiState.update {
+            it.copy(
+                currentUrl = tab?.url ?: "",
+                title = tab?.title ?: "New Tab"
+            )
+        }
     }
 
     fun closeTab(tabId: String) {
@@ -97,5 +108,19 @@ class BrowserViewModel @Inject constructor(
                 )
             )
         }
+    }
+
+    fun addToHistory(url: String, title: String) {
+        viewModelScope.launch {
+            historyRepository.addHistory(url, title)
+        }
+    }
+
+    fun setPrivate(value: Boolean) {
+        privateModeManager.setPrivate(value)
+    }
+
+    fun togglePrivate() {
+        privateModeManager.togglePrivate()
     }
 }

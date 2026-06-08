@@ -4,6 +4,9 @@ import android.content.Context
 import androidx.room.Room
 import com.avcoding.veil.data.local.BrowserDatabase
 import com.avcoding.veil.data.local.dao.BookmarkDao
+import com.avcoding.veil.data.local.dao.HistoryDao
+import com.avcoding.veil.data.repository.HistoryRepository
+import com.avcoding.veil.util.PrivateModeManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,11 +25,25 @@ object DatabaseModule {
             context,
             BrowserDatabase::class.java,
             BrowserDatabase.DATABASE_NAME
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 
     @Provides
     fun provideBookmarkDao(database: BrowserDatabase): BookmarkDao {
         return database.bookmarkDao()
+    }
+
+    @Provides
+    fun provideHistoryDao(database: BrowserDatabase): HistoryDao {
+        return database.historyDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideHistoryRepository(
+        historyDao: HistoryDao,
+        privateModeManager: PrivateModeManager
+    ): HistoryRepository {
+        return HistoryRepository(historyDao, privateModeManager)
     }
 }

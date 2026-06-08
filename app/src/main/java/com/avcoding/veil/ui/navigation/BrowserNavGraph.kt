@@ -1,7 +1,10 @@
 package com.avcoding.veil.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -9,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.avcoding.veil.ui.bookmarks.BookmarksScreen
 import com.avcoding.veil.ui.browser.BrowserScreen
+import com.avcoding.veil.ui.browser.BrowserViewModel
 import com.avcoding.veil.ui.downloads.DownloadsScreen
 import com.avcoding.veil.ui.history.HistoryScreen
 import com.avcoding.veil.ui.homepage.HomepageScreen
@@ -27,12 +31,18 @@ sealed class Screen(val route: String) {
 
 @Composable
 fun BrowserNavGraph(navController: NavHostController) {
+    // Activity-scoped ViewModel: observes PrivateModeManager singleton
+    // and propagates isPrivate to screens that need it as a parameter.
+    val rootViewModel: BrowserViewModel = hiltViewModel()
+    val rootUiState by rootViewModel.uiState.collectAsStateWithLifecycle()
+
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route
     ) {
         composable(Screen.Home.route) {
             HomepageScreen(
+                isPrivate = rootUiState.isPrivate,
                 onNavigateToBrowser = { url ->
                     navController.navigate(Screen.Browser.createRoute(url))
                 },
@@ -63,6 +73,7 @@ fun BrowserNavGraph(navController: NavHostController) {
             val url = backStackEntry.arguments?.getString("url") ?: ""
             BrowserScreen(
                 initialUrl = url,
+                isPrivate = rootUiState.isPrivate,
                 onNavigateToTabs = {
                     navController.navigate(Screen.Tabs.route)
                 },

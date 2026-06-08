@@ -40,6 +40,7 @@ private val favColors = listOf(
 
 @Composable
 fun HomepageScreen(
+    isPrivate: Boolean = false,
     bookmarksViewModel: BookmarksViewModel = hiltViewModel(),
     browserViewModel: BrowserViewModel = hiltViewModel(),
     onNavigateToBrowser: (String) -> Unit,
@@ -71,8 +72,20 @@ fun HomepageScreen(
             VeilTopBar(
                 isHomepage = true,
                 onUrlSubmit = onNavigateToBrowser,
-                onSettingsClick = { sheetVisible = true }
+                onSettingsClick = { sheetVisible = true },
+                isPrivate = isPrivate
             )
+
+            if (isPrivate) {
+                Text(
+                    text = "Private · No history saved",
+                    color = VeilAccent,
+                    fontSize = 10.sp,
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 4.dp)
+                )
+            }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -138,6 +151,8 @@ fun HomepageScreen(
                 .padding(horizontal = 8.dp, vertical = 8.dp),
             screenType = PillScreenType.HOME,
             activeDestination = "home",
+            borderWidth = if (isPrivate) 1.dp else 0.5.dp,
+            borderColor = if (isPrivate) VeilAccent.copy(alpha = 0.4f) else VeilPillBorder,
             onHome = {},
             onBookmarks = onNavigateToBookmarks,
             onNewTab = { onNavigateToBrowser("") },

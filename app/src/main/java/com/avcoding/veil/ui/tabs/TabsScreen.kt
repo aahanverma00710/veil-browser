@@ -43,6 +43,8 @@ private val tabColors = listOf(
     Color(0xFFD97706), Color(0xFFDC2626), Color(0xFF0891B2)
 )
 
+private val PrivateBackground = Color(0xFF1A1228)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TabsScreen(
@@ -57,19 +59,26 @@ fun TabsScreen(
     val viewModel: BrowserViewModel = hiltViewModel(browserBackStackEntry)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var sheetVisible by remember { mutableStateOf(false) }
-    var isPrivate by remember { mutableStateOf(false) }
+
+    val isPrivateSelected = uiState.isPrivate
+
+    val displayedTabs = remember(uiState.tabs, isPrivateSelected) {
+        if (isPrivateSelected) uiState.tabs.filter { it.isPrivate }
+        else uiState.tabs.filter { !it.isPrivate }
+    }
+
+    val screenBackground = if (isPrivateSelected) PrivateBackground else VeilTabsBackground
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(VeilTabsBackground)
+            .background(screenBackground)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = 80.dp)
         ) {
-            // Top row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -78,14 +87,14 @@ fun TabsScreen(
             ) {
                 TabToggleButton(
                     label = "Tabs",
-                    isActive = !isPrivate,
-                    onClick = { isPrivate = false }
+                    isActive = !isPrivateSelected,
+                    onClick = { viewModel.setPrivate(false) }
                 )
                 Spacer(Modifier.width(16.dp))
                 TabToggleButton(
                     label = "Private",
-                    isActive = isPrivate,
-                    onClick = { isPrivate = true }
+                    isActive = isPrivateSelected,
+                    onClick = { viewModel.setPrivate(true) }
                 )
                 Spacer(Modifier.weight(1f))
                 Box(
@@ -112,19 +121,21 @@ fun TabsScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(uiState.tabs) { tab ->
+                items(displayedTabs) { tab ->
                     TabGridCard(
                         tab = tab,
                         isActive = tab.id == uiState.activeTabId,
                         colorIndex = uiState.tabs.indexOf(tab),
+                        isPrivateMode = isPrivateSelected,
                         onClick = { onSelectTab(tab.url) },
                         onClose = { viewModel.closeTab(tab.id) }
                     )
                 }
                 item {
                     NewTabCard(
+                        isPrivate = isPrivateSelected,
                         onClick = {
-                            viewModel.newTab()
+                            viewModel.newTab(isPrivate = isPrivateSelected)
                             onNewTab()
                         }
                     )
@@ -142,7 +153,7 @@ fun TabsScreen(
             onHome = onNavigateToHome,
             onBookmarks = onNavigateToBookmarks,
             onNewTab = {
-                viewModel.newTab()
+                viewModel.newTab(isPrivate = isPrivateSelected)
                 onNewTab()
             },
             onHistory = onNavigateToHistory,
@@ -191,14 +202,15 @@ private fun TabGridCard(
     tab: Tab,
     isActive: Boolean,
     colorIndex: Int,
+    isPrivateMode: Boolean,
     onClick: () -> Unit,
     onClose: () -> Unit
 ) {
     val color = tabColors[colorIndex % tabColors.size]
-    val borderModifier = if (isActive) {
-        Modifier.border(1.5.dp, VeilAccent, RoundedCornerShape(12.dp))
-    } else {
-        Modifier.border(0.5.dp, VeilPillBorder, RoundedCornerShape(12.dp))
+    val borderModifier = when {
+        isActive -> Modifier.border(1.5.dp, VeilAccent, RoundedCornerShape(12.dp))
+        isPrivateMode -> Modifier.border(0.5.dp, VeilAccent.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+        else -> Modifier.border(0.5.dp, VeilPillBorder, RoundedCornerShape(12.dp))
     }
 
     Column(
@@ -210,7 +222,6 @@ private fun TabGridCard(
             .then(borderModifier)
             .clickable(onClick = onClick)
     ) {
-        // Preview area with skeleton lines
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -224,7 +235,6 @@ private fun TabGridCard(
             SkeletonLine(fraction = 0.5f)
         }
 
-        // Footer
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -274,13 +284,14 @@ private fun SkeletonLine(fraction: Float) {
 }
 
 @Composable
-private fun NewTabCard(onClick: () -> Unit) {
+private fun NewTabCard(isPrivate: Boolean = false, onClick: () -> Unit) {
+    val borderColor = if (isPrivate) VeilAccent.copy(alpha = 0.5f) else VeilIconInactive
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(150.dp)
             .clip(RoundedCornerShape(12.dp))
-            .dashedBorder(color = VeilIconInactive, cornerRadius = 12.dp)
+            .dashedBorder(color = borderColor, cornerRadius = 12.dp)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -292,19 +303,19 @@ private fun NewTabCard(onClick: () -> Unit) {
                 modifier = Modifier
                     .size(28.dp)
                     .clip(CircleShape)
-                    .border(1.dp, VeilIconInactive, CircleShape),
+                    .border(1.dp, borderColor, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = null,
-                    tint = VeilIconInactive,
+                    tint = borderColor,
                     modifier = Modifier.size(16.dp)
                 )
             }
             Text(
-                text = "New tab",
-                color = VeilIconInactive,
+                text = if (isPrivate) "New private tab" else "New tab",
+                color = borderColor,
                 fontSize = 12.sp
             )
         }
